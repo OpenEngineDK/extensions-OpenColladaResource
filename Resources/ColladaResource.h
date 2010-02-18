@@ -79,6 +79,8 @@ private:
     string file, space;
     ISceneNode* root;
     COLLADAFW::VisualScene* visualScene;
+
+    unsigned int upIndex;
     
     // resource maps
     map<COLLADAFW::UniqueId, MaterialPtr>                effects;
@@ -97,9 +99,9 @@ private:
     inline ITexture2DPtr LookupImage(COLLADAFW::UniqueId id);
 
     inline map<COLLADAFW::MaterialId, COLLADAFW::UniqueId> ExtractMaterialBindingMap(COLLADAFW::MaterialBindingArray& mbs);
-    inline bool   ExtractColor(COLLADAFW::ColorOrTexture& cot, Vector<4,float>& dest);
-    inline bool   ExtractFloat(COLLADAFW::FloatOrParam& fop, float& dest);
-    inline float* ExtractFloatArray(COLLADAFW::MeshVertexData& d);
+    inline bool ExtractColor(COLLADAFW::ColorOrTexture& cot, Vector<4,float>& dest);
+    inline bool ExtractFloatAttribute(COLLADAFW::FloatOrParam& fop, float& dest);
+    inline bool ExtractFloatArray(COLLADAFW::MeshVertexData& d, float** dest);
     inline COLLADAFW::MeshVertexData::InputInfos ExtractInputInfos(COLLADAFW::MeshVertexData& d);
 
     inline ISceneNode*    ReadNode(COLLADAFW::Node* node);

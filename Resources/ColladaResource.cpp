@@ -43,6 +43,7 @@
 #include <COLLADAFWScale.h>
 #include <COLLADAFWLibraryNodes.h>
 #include <COLLADAFWImage.h>
+#include <COLLADAFWFileInfo.h>
 
 #include <Math/COLLADABUMathMatrix4.h>
 #include <Math/COLLADABUMathMatrix3.h>
@@ -87,6 +88,7 @@ ColladaResource::ColladaResource(string file)
   : file(file)
   , root(NULL)
   , visualScene(NULL) 
+  , upIndex(1)
 {}
 
 /**
@@ -147,8 +149,10 @@ void ColladaResource::Unload() {
     geometries.clear();
     materials.clear();
     nodes.clear();
-    // if (visualScene) 
-    //     delete visualScene;
+    if (visualScene) {
+        delete visualScene;
+        visualScene = NULL;
+    }
     root = NULL;
 }
 
@@ -277,13 +281,16 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
     Mesh* mesh = (Mesh*)g;
 
     const int stride = 3;  // position and normal stride.
-    float* posArray = ExtractFloatArray(mesh->getPositions());
+    float* posArray;
+    bool delPos = ExtractFloatArray(mesh->getPositions(), &posArray);
 
     MeshVertexData& norm = mesh->getNormals();
-    float* normArray = ExtractFloatArray(norm);
+    float* normArray;
+    bool delNorm = ExtractFloatArray(norm, &normArray);
 
     MeshVertexData& uv = mesh->getUVCoords();
-    float* uvArray = ExtractFloatArray(uv);
+    float* uvArray;
+    bool delUV = ExtractFloatArray(uv, &uvArray);
     // MeshVertexData::InputInfos uvInfo = ExtractInputInfos(uv);
     // logger.info << space << "uvinputinfocount: " << uv.getNumInputInfos() << logger.end;
     // logger.info << space << "uvstride: " << uvInfo.mStride << " name: " << uvInfo.mName << logger.end;
@@ -358,12 +365,13 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
                 break;
             }
         default:
-            logger.warning << "Ignoring unsupported primitive type." << logger.end;
+            Warning("Ignoring unsupported primitive type.");
         };
     } 
 
-
-    // FaceSet* fs = new FaceSet();    
+    if (delPos) delete[] posArray;
+    if (delNorm) delete[] normArray;
+    if (delUV) delete[] uvArray;
 
     space = oldspace;
     return gps;
@@ -425,6 +433,14 @@ ISceneNode* ColladaResource::CreateGeometry(GeoPrimitives* gps, map<MaterialId, 
         for (FaceList::iterator j = gp->fs->begin(); j != gp->fs->end(); ++j) {
             FacePtr f = FacePtr(new Face(*(*j)));
             f->mat = m;
+            for (unsigned int k = 0; k < 3; ++k) {
+                float tmp = f->vert[k][1];
+                f->vert[k][1] = f->vert[k][upIndex];
+                f->vert[k][upIndex] = tmp;
+                tmp = f->norm[k][1];
+                f->norm[k][1] = f->norm[k][upIndex];
+                f->norm[k][upIndex] = tmp;
+            }
             fs->Add(f);
         }
         GeometryNode* gn = new GeometryNode(fs);
@@ -454,36 +470,37 @@ bool ColladaResource::ExtractColor(ColorOrTexture& cot, Vector<4,float>& dest) {
     return false;
 }
 
-bool ColladaResource::ExtractFloat(FloatOrParam& fop, float& dest) {
-    if (fop.getType() == FloatOrParam::FLOAT) {
+bool ColladaResource::ExtractFloatAttribute(FloatOrParam& fop, float& dest) {
+    if (fop.getType() == FloatOrParam::FLOAT && fop.getFloatValue() != -1) {
         dest = fop.getFloatValue();
         return true;
     }
     return false;
 }
 
-float* ColladaResource::ExtractFloatArray(MeshVertexData& d) {
-    if (d.empty())
-        return NULL;
+bool ColladaResource::ExtractFloatArray(MeshVertexData& d, float** dest) {
+    *dest = NULL;
+    if (d.empty()) 
+        return false;
     unsigned int size = d.getValuesCount();
-    float* out = new float[size];
-    double* dv = NULL;
     switch (d.getType()) {
     case FloatOrDoubleArray::DATA_TYPE_FLOAT:
-        memcpy(out, d.getFloatValues()->getData(), size * sizeof(float));
+        *dest = d.getFloatValues()->getData();
+        // memcpy(out, d.getFloatValues()->getData(), size * sizeof(float));
         break;
-    case FloatOrDoubleArray::DATA_TYPE_DOUBLE:
-        dv = d.getDoubleValues()->getData();
-        for (unsigned int i = 0; i < size; ++i) {
-            out[i] = dv[i];
-        };
-        break;
+    case FloatOrDoubleArray::DATA_TYPE_DOUBLE: 
+        {
+            double* dv = d.getDoubleValues()->getData();
+            *dest = new float[size];
+            for (unsigned int i = 0; i < size; ++i) {
+                *dest[i] = dv[i];
+            };
+            return true;
+        }
     default:
-        logger.warning << "Unknown data array format." << logger.end;
-        delete out;
-        out = NULL;
+        Warning("Unknown data array format.");
     }; 
-    return out;
+    return false;
 }
 
 MeshVertexData::InputInfos ColladaResource::ExtractInputInfos(MeshVertexData& d) {
@@ -521,6 +538,21 @@ void ColladaResource::finish() {
 	@return The writer should return true, if writing succeeded, false otherwise.*/
 bool ColladaResource::writeGlobalAsset ( const COLLADAFW::FileInfo* asset ) {
     logger.info << "Global Asset" << logger.end;
+    switch (asset->getUpAxisType()) {
+    case FileInfo::X_UP:
+        upIndex = 0;
+        break;
+    case FileInfo::Y_UP:
+        upIndex = 1;
+        break;
+    case FileInfo::Z_UP:
+        upIndex = 2;
+        break;
+    case FileInfo::NONE:
+    default:
+        Warning("No up-axis defined. Assuming y is up");
+    };
+    
     return true;
 }
 
@@ -554,12 +586,7 @@ bool ColladaResource::writeLibraryNodes( const COLLADAFW::LibraryNodes* libraryN
 	@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeGeometry ( const COLLADAFW::Geometry* geometry ) {
     logger.info << "Geometry" << logger.end;
-
     geometries[geometry->getUniqueId()] = ReadGeometry(geometry);
-    
-    
-
-
     return true;
 }
 
@@ -589,8 +616,7 @@ bool ColladaResource::writeEffect( const COLLADAFW::Effect* effect ) {
     ExtractColor(ce->getDiffuse(), m->diffuse);
     ExtractColor(ce->getSpecular(), m->specular);
     ExtractColor(ce->getEmission(), m->emission);
-    ExtractFloat(ce->getShininess(), m->shininess);
-    if (m->shininess < 0.0) m->shininess = 0.0;
+    ExtractFloatAttribute(ce->getShininess(), m->shininess);
     
     if (ce->getSamplerPointerArray().getCount() > 0) {
         logger.info << "sampler is present" << logger.end;
