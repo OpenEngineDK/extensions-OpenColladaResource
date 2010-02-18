@@ -590,6 +590,7 @@ bool ColladaResource::writeEffect( const COLLADAFW::Effect* effect ) {
     ExtractColor(ce->getSpecular(), m->specular);
     ExtractColor(ce->getEmission(), m->emission);
     ExtractFloat(ce->getShininess(), m->shininess);
+    if (m->shininess < 0.0) m->shininess = 0.0;
     
     if (ce->getSamplerPointerArray().getCount() > 0) {
         logger.info << "sampler is present" << logger.end;
