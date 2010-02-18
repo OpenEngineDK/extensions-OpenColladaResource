@@ -2,5 +2,6 @@
 
 #data files
 linux /libraries http://openengine.dk/data/libraries/opencollada-linux32.tar.gz
+darwin /libraries http://openengine.dk/data/libraries/opencollada-mac64.zip
 
 
