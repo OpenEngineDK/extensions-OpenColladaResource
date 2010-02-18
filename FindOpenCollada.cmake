@@ -1,0 +1,127 @@
+# - Try to find Collada DOM
+# Once done this will define
+#
+#  OPEN_COLLADA_FOUND - system has Collada dom
+#  OPEN_COLLADA_INCLUDE_DIR - the OpenCollada include directory
+#  OPEN_COLLADA_LIBRARIES - Link these to use OpenCollada
+#
+
+STRING(COMPARE EQUAL ${CMAKE_BUILD_TYPE} "debug" ISDEBUGENABLED)
+
+#IF(ISDEBUGENABLED)
+  SET(OPENCOLLADAFW "COLLADAFramework")
+  SET(OPENCOLLADABU "COLLADABaseUtils")
+  SET(OPENCOLLADASAX "COLLADASaxFrameworkLoader")
+  SET(MATHMLSOLVER "MathMLSolver")
+  SET(GENERATEDSAX "GeneratedSaxParser")
+#ELSE(ISDEBUGENABLED)
+#  SET(OPENCOLLADALIB "COLLADAFramework")
+#ENDIF(ISDEBUGENABLED)
+
+# IF(CMAKE_BUILD_TOOL MATCHES "(msdev|devenv|nmake)")
+#   IF(ISDEBUGENABLED)
+#     SET(COLLADADOMLIB "libcollada14dom21-sd")
+#   ELSE(ISDEBUGENABLED)
+#     SET(COLLADADOMLIB "libcollada14dom21-s")
+#   ENDIF(ISDEBUGENABLED)
+# ENDIF(CMAKE_BUILD_TOOL MATCHES "(msdev|devenv|nmake)")
+
+FIND_PATH(OPEN_COLLADA_INCLUDE_DIR NAMES COLLADAFW.h
+  PATHS
+  ${PROJECT_BINARY_DIR}/include
+  ${PROJECT_SOURCE_DIR}/include
+  ${PROJECT_SOURCE_DIR}/libraries/opencollada/include
+  ENV CPATH
+  /usr/include
+  /usr/local/include
+  /opt/local/include
+  NO_DEFAULT_PATH
+)
+ 
+
+FIND_LIBRARY(OPEN_COLLADA_FW
+  NAMES 
+  ${OPENCOLLADAFW}
+  PATHS
+  ${PROJECT_SOURCE_DIR}/libraries/opencollada/lib
+  ENV LD_LIBRARY_PATH
+  ENV LIBRARY_PATH
+  /usr/lib
+  /usr/local/lib
+  /opt/local/lib
+  NO_DEFAULT_PATH
+)
+
+FIND_LIBRARY(OPEN_COLLADA_BU
+  NAMES 
+  ${OPENCOLLADABU}
+  PATHS
+  ${PROJECT_SOURCE_DIR}/libraries/opencollada/lib
+  ENV LD_LIBRARY_PATH
+  ENV LIBRARY_PATH
+  /usr/lib
+  /usr/local/lib
+  /opt/local/lib
+  NO_DEFAULT_PATH
+)
+
+FIND_LIBRARY(OPEN_COLLADA_SAX
+  NAMES 
+  ${OPENCOLLADASAX}
+  PATHS
+  ${PROJECT_SOURCE_DIR}/libraries/opencollada/lib
+  ENV LD_LIBRARY_PATH
+  ENV LIBRARY_PATH
+  /usr/lib
+  /usr/local/lib
+  /opt/local/lib
+  NO_DEFAULT_PATH
+)
+
+FIND_LIBRARY(GENERATED_SAX_PARSER
+  NAMES 
+  ${GENERATEDSAX}
+  PATHS
+  ${PROJECT_SOURCE_DIR}/libraries/opencollada/lib
+  ENV LD_LIBRARY_PATH
+  ENV LIBRARY_PATH
+  /usr/lib
+  /usr/local/lib
+  /opt/local/lib
+  NO_DEFAULT_PATH
+)
+
+FIND_LIBRARY(MATH_ML_SOLVER
+  NAMES 
+  ${MATHMLSOLVER}
+  PATHS
+  ${PROJECT_SOURCE_DIR}/libraries/opencollada/lib
+  ENV LD_LIBRARY_PATH
+  ENV LIBRARY_PATH
+  /usr/lib
+  /usr/local/lib
+  /opt/local/lib
+  NO_DEFAULT_PATH
+)
+
+SET (OPEN_COLLADA_LIBRARIES
+  ${OPEN_COLLADA_SAX} 
+  ${GENERATED_SAX_PARSER} 
+  ${OPEN_COLLADA_FW} 
+  ${OPEN_COLLADA_BU}
+  ${MATH_ML_SOLVER} 
+)
+
+IF(OPEN_COLLADA_INCLUDE_DIR AND OPEN_COLLADA_LIBRARIES)
+   SET(OPEN_COLLADA_INCLUDE_DIR
+       ${OPEN_COLLADA_INCLUDE_DIR}
+   )
+   SET(OPEN_COLLADA_FOUND TRUE)
+ENDIF(OPEN_COLLADA_INCLUDE_DIR AND OPEN_COLLADA_LIBRARIES)
+
+# show the COLLADA_DOM_INCLUDE_DIR and COLLADA_DOM_LIBRARIES variables only in the advanced view
+IF(OPEN_COLLADA_FOUND)
+  MARK_AS_ADVANCED(OPEN_COLLADA_INCLUDE_DIR OPEN_COLLADA_LIBRARIES )
+ENDIF(OPEN_COLLADA_FOUND)
+
+
