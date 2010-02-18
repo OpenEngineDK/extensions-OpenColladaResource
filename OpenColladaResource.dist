@@ -1,0 +1,6 @@
+# OpenColladaResource dependencies
+
+#data files
+linux /libraries http://openengine.dk/data/libraries/opencollada-linux32.tar.gz
+
+
