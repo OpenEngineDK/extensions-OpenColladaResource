@@ -7,6 +7,6 @@ darcs-dev /extensions/OpenColladaResource    fh.daimi.au.dk:/users/cgd/code/exte
 
 #data files
 linux /libraries http://openengine.dk/data/libraries/opencollada-linux32.tar.gz
-darwin /libraries http://openengine.dk/data/libraries/opencollada-mac64.zip
+darwin /libraries http://openengine.dk/data/libraries/opencollada-mac64.tgz
 
 
