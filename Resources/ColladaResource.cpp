@@ -20,6 +20,7 @@
 #include <Math/Matrix.h>
 #include <Math/Quaternion.h>
 #include <Resources/Exceptions.h>
+#include <Resources/ITexture2D.h>
 #include <Resources/ResourceManager.h>
 #include <Resources/File.h>
 

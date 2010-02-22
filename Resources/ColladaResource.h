@@ -13,7 +13,6 @@
 
 #include <Resources/IModelResource.h>
 #include <Resources/IResourcePlugin.h>
-#include <Resources/ITexture2D.h>
 
 #include <Math/Vector.h>
 
@@ -50,6 +49,8 @@ namespace OpenEngine {
         class ISceneNode;
     }
 namespace Resources {
+    class ITexture2D;
+    typedef boost::shared_ptr<ITexture2D> ITexture2DPtr;
 
 using std::string;
 using std::map;
