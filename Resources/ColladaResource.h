@@ -74,9 +74,10 @@ private:
         COLLADAFW::MaterialId mId;
         FaceSet* fs;
         GeoPrimitive(COLLADAFW::MaterialId mId, FaceSet* fs) : mId(mId), fs(fs) {};
+        ~GeoPrimitive() { delete fs; }
     };
     typedef list<GeoPrimitive*> GeoPrimitives;
-    string file, space;
+    string file, resource_dir, space;
     ISceneNode* root;
     COLLADAFW::VisualScene* visualScene;
 
@@ -93,16 +94,16 @@ private:
     inline void Error(string msg);
     inline void Warning(string msg);
 
-    inline COLLADAFW::Node*    LookupNode(COLLADAFW::UniqueId id);
-    inline GeoPrimitives*      LookupGeometry(COLLADAFW::UniqueId id);
-    inline MaterialPtr         LookupMaterial(COLLADAFW::UniqueId id);
-    inline ITexture2DPtr LookupImage(COLLADAFW::UniqueId id);
+    inline COLLADAFW::Node* LookupNode(COLLADAFW::UniqueId id);
+    inline GeoPrimitives*   LookupGeometry(COLLADAFW::UniqueId id);
+    inline MaterialPtr      LookupMaterial(COLLADAFW::UniqueId id);
+    inline ITexture2DPtr    LookupImage(COLLADAFW::UniqueId id);
 
     inline map<COLLADAFW::MaterialId, COLLADAFW::UniqueId> ExtractMaterialBindingMap(COLLADAFW::MaterialBindingArray& mbs);
     inline bool ExtractColor(COLLADAFW::ColorOrTexture& cot, Vector<4,float>& dest);
     inline bool ExtractFloatAttribute(COLLADAFW::FloatOrParam& fop, float& dest);
     inline bool ExtractFloatArray(COLLADAFW::MeshVertexData& d, float** dest);
-    inline COLLADAFW::MeshVertexData::InputInfos ExtractInputInfos(COLLADAFW::MeshVertexData& d);
+    inline COLLADAFW::MeshVertexData::InputInfos* ExtractInputInfos(COLLADAFW::MeshVertexData& d);
 
     inline ISceneNode*    ReadNode(COLLADAFW::Node* node);
     inline ISceneNode*    ReadTransformation(COLLADAFW::Transformation* t);

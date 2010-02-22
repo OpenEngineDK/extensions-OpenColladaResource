@@ -52,9 +52,18 @@
 #include <COLLADABUURI.h>
 
 #include <Logging/Logger.h>
-
 #include <string.h>
 
+#define IN(s)                                \
+    string oldspace = space;                 \
+    space += "  ";                           \
+    logger.info << space << s << logger.end;
+
+#define OUT()                                \
+    space = oldspace;
+
+#define IN(s) 
+#define OUT() 
 
 namespace OpenEngine {
 namespace Resources {
@@ -79,7 +88,6 @@ ColladaPlugin::ColladaPlugin() {
 IModelResourcePtr ColladaPlugin::CreateResource(string file) {
     return IModelResourcePtr(new ColladaResource(file));
 }
-
 
 /**
  * Resource constructor.
@@ -111,24 +119,20 @@ void ColladaResource::Load() {
     if (root) return;
 
     // we reset the resource path temporary to create the texture resource
-    string resource_dir = File::Parent(this->file);
+    resource_dir = File::Parent(this->file);
 
-	if (! DirectoryManager::IsInPath(resource_dir)) {
-        DirectoryManager::AppendPath(resource_dir);
-    }
-
-    logger.info << "Load Resource: " << file << logger.end;
+    // logger.info << "Load Resource: " << file << logger.end;
 
     COLLADASaxFWL::Loader* loader = new COLLADASaxFWL::Loader();
     COLLADAFW::Root* root = new COLLADAFW::Root(loader, this);
     
     // Load scene graph 
     if (!root->loadDocument(file)) {
-        logger.info << "Resource not loaded." << logger.end;
+        Warning("Resource not loaded.");
         return;
     }
     if (!visualScene) {
-        logger.warning << "No visual scene found." << logger.end;
+        Warning("No visual scene found.");
         return;
     }
     this->root = new SceneNode();
@@ -136,7 +140,7 @@ void ColladaResource::Load() {
     for (unsigned int i = 0; i < nodes.getCount(); i++) {
         this->root->AddNode(ReadNode(nodes[i]));
     }
-    logger.info << "Resource loaded" << logger.end;    
+    // logger.info << "Resource loaded" << logger.end;    
 }
 
 /**
@@ -144,6 +148,17 @@ void ColladaResource::Load() {
  * Resets the root node. Does not delete the scene graph.
  */
 void ColladaResource::Unload() {
+    // delete (hopefully) all the intermediate structures ...
+    for (map<COLLADAFW::UniqueId, GeoPrimitives*>::iterator i = geometries.begin();
+         i != geometries.end(); 
+         ++i) {
+        for (GeoPrimitives::iterator j = (*i).second->begin();
+             j != (*i).second->end();
+             ++j) {
+            delete *j;
+        }
+        delete (*i).second;
+    }
     effects.clear();
     images.clear();
     geometries.clear();
@@ -194,7 +209,6 @@ ITextureResourcePtr ColladaResource::LookupImage(UniqueId id) {
 
 MaterialPtr ColladaResource::LookupMaterial(UniqueId id) {
     const COLLADAFW::Material* m = materials[id];
-    logger.info << "lookup material: " << m->getName() << logger.end;
     if (!m) Error("Invalid material id");
     MaterialPtr mp = effects[m->getInstantiatedEffect()];
     if (!mp) Error("Invalid effect id");
@@ -202,9 +216,7 @@ MaterialPtr ColladaResource::LookupMaterial(UniqueId id) {
 }
 
 ISceneNode* ColladaResource::ReadTransformation(Transformation* t) {
-    string oldspace = space;
-    space += "  ";
-    logger.info << space << "+ReadTransformation" << logger.end;
+    IN("+ReadTransformation");
     TransformationNode* tn = new TransformationNode(); 
     switch (t->getTransformationType()) {
     case Transformation::MATRIX: 
@@ -243,37 +255,31 @@ ISceneNode* ColladaResource::ReadTransformation(Transformation* t) {
             break;
         }
     case Transformation::LOOKAT:
-        logger.warning << "Unsupported transformation type: LOOKAT" << logger.end;
+        Warning("Unsupported transformation type: LOOKAT");
         break;
     case Transformation::SKEW:
-        logger.warning << "Unsupported transformation type: SKEW" << logger.end;
+        Warning("Unsupported transformation type: SKEW");
         break;
     default:
-        logger.warning << "Unsupported transformation type." << logger.end;
+        Warning("Unsupported transformation type.");
     };
-    space = oldspace;
+    OUT();
     return tn;
 }
     
 ISceneNode* ColladaResource::ReadInstanceGeometry(COLLADAFW::InstanceGeometry* ig) {
-    string oldspace = space;
-    space += "  ";
-    logger.info << space << "+ReadInstanceGeometry" << logger.end;
+    IN("+ReadInstanceGeometry");
     GeoPrimitives* gps = LookupGeometry(ig->getInstanciatedObjectId());
     map<MaterialId, UniqueId> bindings = ExtractMaterialBindingMap(ig->getMaterialBindings());
     ISceneNode* sn = CreateGeometry(gps, bindings);
-    space = oldspace;
+    OUT();
     return sn;
 }
 
 ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::Geometry* g) {
-    string oldspace = space;
-    space += "  ";
-    logger.info << space << "+ReadGeometry" << logger.end;
-
-
+    IN("+ReadGeometry");
     if (g->getType() != COLLADAFW::Geometry::GEO_TYPE_MESH) {
-        logger.warning << "Unsupported geometry type." << logger.end;
+        Warning("Unsupported geometry type.");
         return NULL;
     }
 
@@ -291,14 +297,15 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
     MeshVertexData& uv = mesh->getUVCoords();
     float* uvArray;
     bool delUV = ExtractFloatArray(uv, &uvArray);
-    // MeshVertexData::InputInfos uvInfo = ExtractInputInfos(uv);
+    MeshVertexData::InputInfos* uvInfo = ExtractInputInfos(uv);
+    unsigned int  uvStride = uvInfo ? uvInfo->mStride : 0;
     // logger.info << space << "uvinputinfocount: " << uv.getNumInputInfos() << logger.end;
     // logger.info << space << "uvstride: " << uvInfo.mStride << " name: " << uvInfo.mName << logger.end;
-
-    // MeshVertexData& col = mesh->getColors();
-    // float* colArray = ExtractFloatArray(col);
-    // MeshVertexData::InputInfos colInfo = ExtractInputInfos(col);
-
+    
+    MeshVertexData& col = mesh->getColors();
+    float* colArray;
+    bool delCol = ExtractFloatArray(col, &colArray);
+    
     MeshPrimitiveArray& prims = mesh->getMeshPrimitives();
     for (unsigned int i = 0; i < prims.getCount(); i++) {
         MeshPrimitive*    prim = prims[i];
@@ -309,16 +316,22 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
         unsigned int     count = prim->getFaceCount();
         UIntValuesArray&  posI = prim->getPositionIndices();
         UIntValuesArray& normI = prim->getNormalIndices();
+        unsigned int*     colI = NULL;
         unsigned int*      uvI = NULL;
-        unsigned int  uvStride = 2;
+        // unsigned int indexStride = 0;        
         // if the primitive has some texture coordinate lists we
         // simply choose the first one.
         if (prim->hasUVCoordIndices()) {
             IndexList* uvIL = prim->getUVCoordIndices(0);
-            logger.info << space << "uvindexstride: " << uvIL->getStride() <<  ". uvindexsetindex: " << uvIL->getSetIndex() << ". uvindexinitialindex: " << uvIL->getInitialIndex()  << logger.end;
             uvI = uvIL->getIndices().getData();
-            // uvStride = uvIL->getStride();
-      }
+            // logger.info << space << "uvindexstride: " << uvIL->getStride() <<  ". uvindexsetindex: " << uvIL->getSetIndex() << ". uvindexinitialindex: " << uvIL->getInitialIndex()  << logger.end;
+            //logger.info << "posISize: " << 
+            // indexStride = uvIL->getStride();
+        }
+        if (prim->hasColorIndices()) {
+            IndexList* colIL = prim->getColorIndices(0);
+            colI = colIL->getIndices().getData();
+        }
         // unsigned int* colI = mp->getColorIndicesArray()[0]->getIndices();
         switch (prim->getPrimitiveType()) {
         case MeshPrimitive::TRIANGLES: 
@@ -330,18 +343,20 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
                     Vector<3,float> verts[3];
                     Vector<3,float> norms[3];
                     Vector<2,float> texc[3];
-                    // Vector<4,float> cols[3];
+                    Vector<4,float> cols[3];
                     // for each vertex.
-                    for (int k = 0; k < 3; k++, index++){
+                    for (int k = 2; k >= 0; --k, ++index){
+                        // cols[k][3] = 1.0;
                         // for each vertex component.
                         for (int l = 0; l < stride; l++) {
                             verts[k][l] = posArray[l+posI[index]*stride];
                             if (mesh->hasNormals()) 
                                 norms[k][l] = normArray[l+normI[index]*stride];
-                            //cols[k][l] = colArray[l+colI[index]*stride];
+                            if (colI)
+                                cols[k][l] = colArray[l+colI[index]*stride];
                         }
                         if (uvI) {
-                            for (int l = 0; l < uvStride; l++) {
+                            for (unsigned int l = 0; l < 2; l++) {
                                 texc[k][l] = uvArray[l+uvI[index]*uvStride];
                             }
                         }
@@ -354,7 +369,13 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
                         face->texc[0] = texc[0];
                         face->texc[1] = texc[1];
                         face->texc[2] = texc[2];
-                        // logger.info << "texc: " << texc[0] << logger.end;
+                        if (colI) {
+                            face->colr[0] = cols[0];
+                            face->colr[1] = cols[1];
+                            face->colr[2] = cols[2];
+                            // face->colr[3] = cols[3];
+                        }
+                        //logger.info << "cols: " << face->colr[0] << logger.end;
                         // face->mat = mat;
                         fs->Add(face);
                     }
@@ -372,15 +393,13 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
     if (delPos) delete[] posArray;
     if (delNorm) delete[] normArray;
     if (delUV) delete[] uvArray;
-
-    space = oldspace;
+    if (delCol) delete[] uvArray;
+    OUT();
     return gps;
 }
 
 ISceneNode* ColladaResource::ReadNode(Node* node) {
-    string oldspace = space;
-    space += "  ";
-    logger.info << space << "+ReadNode" << logger.end;
+    IN("+ReadNode");
     ISceneNode* r = new SceneNode();
     ISceneNode* c = r;
 
@@ -420,7 +439,7 @@ ISceneNode* ColladaResource::ReadNode(Node* node) {
         ISceneNode* n = ReadNode(node->getChildNodes()[i]);
         c->AddNode(n);
     }
-    space = oldspace;
+    OUT();
     return r;
 }
 
@@ -503,17 +522,11 @@ bool ColladaResource::ExtractFloatArray(MeshVertexData& d, float** dest) {
     return false;
 }
 
-MeshVertexData::InputInfos ColladaResource::ExtractInputInfos(MeshVertexData& d) {
-    MeshVertexData::InputInfos out;
-    out.mName = "";
-    out.mStride = 1;
-    out.mLength = 0;
+MeshVertexData::InputInfos* ColladaResource::ExtractInputInfos(MeshVertexData& d) {
+    MeshVertexData::InputInfos* out;
     if (d.getNumInputInfos() == 0)
-        return out;
-    MeshVertexData::InputInfos* _out = d.getInputInfosArray()[0];
-    out.mName   = _out->mName;
-    out.mStride = _out->mStride;
-    out.mLength = _out->mLength;
+        return NULL;
+    out = d.getInputInfosArray()[0];
     return out;
 }
 
@@ -552,7 +565,6 @@ bool ColladaResource::writeGlobalAsset ( const COLLADAFW::FileInfo* asset ) {
     default:
         Warning("No up-axis defined. Assuming y is up");
     };
-    
     return true;
 }
 
@@ -598,6 +610,23 @@ bool ColladaResource::writeMaterial( const COLLADAFW::Material* material ) {
     return true;
 }
 
+string PrintWrap(Sampler::WrapMode m) {
+    switch (m) {
+    case Sampler::WRAP_MODE_NONE: 
+        return "WM_NONE";
+    case Sampler::WRAP_MODE_WRAP: 
+        return "WM_WRAP";
+    case Sampler::WRAP_MODE_MIRROR: 
+        return "WM_MIRROR";
+    case Sampler::WRAP_MODE_CLAMP: 
+        return "WM_CLAMP";
+    case Sampler::WRAP_MODE_BORDER: 
+        return "WM_BORDER";
+    default:
+        return "WM_UNSPECIFIED";
+    }
+} 
+
     /** Writes the effect.
 		@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeEffect( const COLLADAFW::Effect* effect ) {
@@ -625,7 +654,8 @@ bool ColladaResource::writeEffect( const COLLADAFW::Effect* effect ) {
             Warning("Unsupported texture sampling type");
         }
         else {
-            logger.info << "adding texture to material" << logger.end;
+            //logger.info << "adding texture to material" << logger.end;
+            //logger.info << "wrapS: " << PrintWrap(s->getWrapS()) << " wrapT: " << PrintWrap(s->getWrapT()) << logger.end;
             m->texr = LookupImage(s->getSourceImage());
         }
     }
@@ -646,48 +676,57 @@ bool ColladaResource::writeCamera( const COLLADAFW::Camera* camera ) {
     /** Writes the image.
 		@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeImage( const COLLADAFW::Image* image ) {
-    logger.info << "Image" << logger.end;
+    IN("writeImage");
     if (image->getSourceType() != Image::SOURCE_TYPE_URI) 
         Error("Unsupported image source type.");
     const URI& uri = image->getImageURI();
-    logger.info << "orguri: " << uri.originalStr() << " resuri: " << uri.getURIString() << logger.end;
-    ITextureResourcePtr texr = ResourceManager<ITextureResource>::Create(uri.getURIString());
+    //logger.info << "orguri: " << uri.originalStr() << " resuri: " << uri.getURIString() << logger.end;
+    ITextureResourcePtr texr = ResourceManager<ITextureResource>::Create(resource_dir + uri.getURIString());
     images[image->getUniqueId()] = texr;
+    OUT();
     return true;
 }
 
     /** Writes the light.
 		@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeLight( const COLLADAFW::Light* light ) {
-    logger.info << "Light" << logger.end;
+    IN("writeLight");
+    OUT();
     return true;
 }
 
     /** Writes the animation.
 		@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeAnimation( const COLLADAFW::Animation* animation ) {
-    logger.info << "Animation" << logger.end;
+    IN("writeAnimation");
+
+    OUT();
     return true;
 }
 
     /** Writes the animation.
 		@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeAnimationList( const COLLADAFW::AnimationList* animationList ) {
-    logger.info << "Animation List" << logger.end;
+    IN("writeAnimationList");
+    OUT();
     return true;
 }
 
     /** Writes the skin controller data.
 		@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeSkinControllerData( const COLLADAFW::SkinControllerData* skinControllerData ) {
-    logger.info << "Skin Controller" << logger.end;
+    IN("writeSkinControllerData");
+    
+    OUT();
     return true;
 }
 
     /** Writes the controller.
 		@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeController( const COLLADAFW::Controller* Controller ) {
-    logger.info << "Controller" << logger.end;
+    IN("writeController");
+
+    OUT();
     return true;
 }
 
@@ -695,14 +734,18 @@ bool ColladaResource::writeController( const COLLADAFW::Controller* Controller )
 		COLLADA file are contained in @a formulas.
 		@return The writer should return true, if writing succeeded, false otherwise.*/
 bool ColladaResource::writeFormulas( const COLLADAFW::Formulas* formulas ) {
-    logger.info << "Formulas" << logger.end;
+    IN("writeFormulas");
+
+    OUT();
     return true;
 }
 
     /** When this method is called, the writer must write the kinematics scene. 
 		@return The writer should return true, if writing succeeded, false otherwise.*/
 bool ColladaResource::writeKinematicsScene( const COLLADAFW::KinematicsScene* kinematicsScene ) {
-    logger.info << "Kinematics" << logger.end;
+    IN("writeKinematics");
+
+    OUT();
     return true;
 }
 
