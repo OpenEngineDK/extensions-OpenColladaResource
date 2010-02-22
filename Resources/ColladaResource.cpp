@@ -331,8 +331,8 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
         if (prim->hasColorIndices()) {
             IndexList* colIL = prim->getColorIndices(0);
             colI = colIL->getIndices().getData();
+            logger.info << "colorStride: " << colIL->getStride() << logger.end;
         }
-        // unsigned int* colI = mp->getColorIndicesArray()[0]->getIndices();
         switch (prim->getPrimitiveType()) {
         case MeshPrimitive::TRIANGLES: 
             {
@@ -539,18 +539,18 @@ void ColladaResource::cancel(const string& errorMessage) {
 
 /** Prepare to receive data.*/
 void ColladaResource::start() {
-    logger.info << "start loading" << logger.end;
+    //logger.info << "start loading" << logger.end;
 }
 
 /** Remove all objects that don't have an object. Deletes unused visual scenes.*/
 void ColladaResource::finish() {
-    logger.info << "finish loading" << logger.end;
+    //logger.info << "finish loading" << logger.end;
 }
 
 /** When this method is called, the writer must write the global document asset.
 	@return The writer should return true, if writing succeeded, false otherwise.*/
 bool ColladaResource::writeGlobalAsset ( const COLLADAFW::FileInfo* asset ) {
-    logger.info << "Global Asset" << logger.end;
+    IN("writeGlobalAsset");
     switch (asset->getUpAxisType()) {
     case FileInfo::X_UP:
         upIndex = 0;
@@ -565,48 +565,54 @@ bool ColladaResource::writeGlobalAsset ( const COLLADAFW::FileInfo* asset ) {
     default:
         Warning("No up-axis defined. Assuming y is up");
     };
+    OUT();
     return true;
 }
 
 /** Writes the entire visual scene.
     @return True on succeeded, false otherwise.*/
 bool ColladaResource::writeVisualScene ( const COLLADAFW::VisualScene* visualScene ) {
-    logger.info << "Visual Scene" << logger.end;
+    IN("Visual Scene");
     this->visualScene = new COLLADAFW::VisualScene(*visualScene);
+    OUT();
     return true;
 }
 
 /** Writes the scene.
 	@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeScene ( const COLLADAFW::Scene* scene ) {
-    logger.info << "Scene" << logger.end;
+    IN("writeScene");
+    OUT();
     return true;
 }
 
 /** Handles all nodes in the library nodes.
 	@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeLibraryNodes( const COLLADAFW::LibraryNodes* libraryNodes ) {
-    logger.info << "Library Nodes" << logger.end;
+    IN("writeLibraryNodes");
     for (unsigned int i = 0; i < libraryNodes->getNodes().getCount(); i++) {
         Node* n = libraryNodes->getNodes()[i];
         nodes[n->getUniqueId()] = n;
     }
+    OUT();
     return true;
 }
 
 /** Writes the geometry.
 	@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeGeometry ( const COLLADAFW::Geometry* geometry ) {
-    logger.info << "Geometry" << logger.end;
+    IN("Geometry");
     geometries[geometry->getUniqueId()] = ReadGeometry(geometry);
+    OUT();
     return true;
 }
 
 /** Writes the material.
 	@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeMaterial( const COLLADAFW::Material* material ) {
-    logger.info << "Material" << logger.end;
+    IN("writeMaterial");
     materials[material->getUniqueId()] = new COLLADAFW::Material(*material);
+    OUT();
     return true;
 }
 
@@ -630,12 +636,11 @@ string PrintWrap(Sampler::WrapMode m) {
     /** Writes the effect.
 		@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeEffect( const COLLADAFW::Effect* effect ) {
-    logger.info << "Effect" << logger.end;
-    // effects[effect->getUniqueId()] = new COLLADAFW::Effect(*effect);
+    IN("writeEffect");
 
     CommonEffectPointerArray cepa = effect->getCommonEffects();
     if (cepa.getCount() == 0) {
-        logger.warning << "Effect contains no common effects." << logger.end;
+        Warning("Effect is not a common effect.");
         return true;
     }
     EffectCommon* ce = cepa[0];
@@ -646,9 +651,13 @@ bool ColladaResource::writeEffect( const COLLADAFW::Effect* effect ) {
     ExtractColor(ce->getSpecular(), m->specular);
     ExtractColor(ce->getEmission(), m->emission);
     ExtractFloatAttribute(ce->getShininess(), m->shininess);
+
+    // logger.info << "ambient: " << m->ambient << logger.end;
+    // logger.info << "diffuse: " << m->diffuse << logger.end;
+    // logger.info << "specular: " << m->specular << logger.end;
     
     if (ce->getSamplerPointerArray().getCount() > 0) {
-        logger.info << "sampler is present" << logger.end;
+        // logger.info << "sampler is present" << logger.end;
         Sampler* s = ce->getSamplerPointerArray()[0];
         if (s->getSamplerType() != Sampler::SAMPLER_TYPE_2D) {
             Warning("Unsupported texture sampling type");
@@ -661,7 +670,7 @@ bool ColladaResource::writeEffect( const COLLADAFW::Effect* effect ) {
     }
     
     effects[effect->getUniqueId()] = m;
-
+    OUT();
     // @todo: handle shader type
     return true;
 }
@@ -669,7 +678,8 @@ bool ColladaResource::writeEffect( const COLLADAFW::Effect* effect ) {
     /** Writes the camera.
 		@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeCamera( const COLLADAFW::Camera* camera ) {
-    logger.info << "Camera" << logger.end;
+    IN("writeCamera");
+    OUT();
     return true;
 }
 
@@ -699,7 +709,6 @@ bool ColladaResource::writeLight( const COLLADAFW::Light* light ) {
 		@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeAnimation( const COLLADAFW::Animation* animation ) {
     IN("writeAnimation");
-
     OUT();
     return true;
 }
@@ -725,7 +734,6 @@ bool ColladaResource::writeSkinControllerData( const COLLADAFW::SkinControllerDa
 		@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeController( const COLLADAFW::Controller* Controller ) {
     IN("writeController");
-
     OUT();
     return true;
 }
@@ -735,7 +743,6 @@ bool ColladaResource::writeController( const COLLADAFW::Controller* Controller )
 		@return The writer should return true, if writing succeeded, false otherwise.*/
 bool ColladaResource::writeFormulas( const COLLADAFW::Formulas* formulas ) {
     IN("writeFormulas");
-
     OUT();
     return true;
 }
@@ -744,7 +751,6 @@ bool ColladaResource::writeFormulas( const COLLADAFW::Formulas* formulas ) {
 		@return The writer should return true, if writing succeeded, false otherwise.*/
 bool ColladaResource::writeKinematicsScene( const COLLADAFW::KinematicsScene* kinematicsScene ) {
     IN("writeKinematics");
-
     OUT();
     return true;
 }
