@@ -349,6 +349,8 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
                     for (int k = 2; k >= 0; --k, ++index){
                         // cols[k][3] = 1.0;
                         // for each vertex component.
+                        // logger.info << posI[index] << " " << normI[index] << " " <<logger.end;
+
                         for (int l = 0; l < stride; l++) {
                             verts[k][l] = posArray[l+posI[index]*stride];
                             if (mesh->hasNormals()) 
@@ -692,8 +694,13 @@ bool ColladaResource::writeImage( const COLLADAFW::Image* image ) {
         Error("Unsupported image source type.");
     const URI& uri = image->getImageURI();
     //logger.info << "orguri: " << uri.originalStr() << " resuri: " << uri.getURIString() << logger.end;
-    ITextureResourcePtr texr = ResourceManager<ITextureResource>::Create(resource_dir + uri.getURIString());
-    images[image->getUniqueId()] = texr;
+    try {
+        ITextureResourcePtr texr = ResourceManager<ITextureResource>::Create(resource_dir + uri.getURIString());
+        images[image->getUniqueId()] = texr;
+
+    } catch (ResourceException e) {
+        Warning("Error loading texture with message: " + string(e.what()));
+    }
     OUT();
     return true;
 }
