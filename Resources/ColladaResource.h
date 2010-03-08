@@ -27,6 +27,7 @@
 #include <COLLADAFWInstanceGeometry.h>
 #include <COLLADAFWMaterialBinding.h>
 
+#include <Geometry/DrawPrimitive.h>
 
 //forward declarations
 namespace COLLADAFW {
@@ -43,7 +44,7 @@ namespace OpenEngine {
     //forward declarations
     namespace Geometry {
         class Material;
-        class FaceSet;
+        class DrawPrimitive;
     }
     namespace Scene {
         class ISceneNode;
@@ -57,7 +58,7 @@ using std::map;
 using std::list;
 
 using Geometry::Material;
-using Geometry::FaceSet;
+using Geometry::DrawPrimitive;
 using Math::Vector;
 using Scene::ISceneNode;
 
@@ -73,15 +74,14 @@ private:
     class GeoPrimitive {
     public:
         COLLADAFW::MaterialId mId;
-        FaceSet* fs;
-        GeoPrimitive(COLLADAFW::MaterialId mId, FaceSet* fs) : mId(mId), fs(fs) {};
-        ~GeoPrimitive() { delete fs; }
+        DrawPrimitive* prim;
+        GeoPrimitive(COLLADAFW::MaterialId mId, DrawPrimitive* prim) : mId(mId), prim(prim) {};
+        virtual ~GeoPrimitive() { delete prim; }
     };
     typedef list<GeoPrimitive*> GeoPrimitives;
     string file, resource_dir, space;
     ISceneNode* root;
     COLLADAFW::VisualScene* visualScene;
-
     unsigned int upIndex;
     
     // resource maps
@@ -106,11 +106,9 @@ private:
     inline bool ExtractFloatArray(COLLADAFW::MeshVertexData& d, float** dest);
     inline COLLADAFW::MeshVertexData::InputInfos* ExtractInputInfos(COLLADAFW::MeshVertexData& d);
 
-    inline ISceneNode*    ReadNode(COLLADAFW::Node* node);
-    inline ISceneNode*    ReadTransformation(COLLADAFW::Transformation* t);
-    inline ISceneNode*    ReadInstanceGeometry(COLLADAFW::InstanceGeometry* g);
+    inline void           ReadNode(COLLADAFW::Node* node, ISceneNode* parent);
+    inline void           ReadInstanceGeometry(COLLADAFW::InstanceGeometry* g, ISceneNode* parent);
     inline GeoPrimitives* ReadGeometry(const COLLADAFW::Geometry* g);
-    inline ISceneNode*    CreateGeometry(GeoPrimitives* gps, map<COLLADAFW::MaterialId, COLLADAFW::UniqueId> bindings);
     
 public:
     ColladaResource(string file);

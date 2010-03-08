@@ -16,13 +16,21 @@
 #include <Scene/ISceneNode.h>
 #include <Scene/SceneNode.h>
 #include <Scene/TransformationNode.h>
-#include <Scene/GeometryNode.h>
+// #include <Scene/GeometryNode.h>
 #include <Math/Matrix.h>
 #include <Math/Quaternion.h>
 #include <Resources/Exceptions.h>
 #include <Resources/ITexture2D.h>
 #include <Resources/ResourceManager.h>
 #include <Resources/File.h>
+
+#include <Scene/ModelNode.h>
+#include <Geometry/Mesh.h>
+#include <Geometry/Model.h>
+#include <Geometry/DrawPrimitive.h>
+#include <Resources/IndexBufferObject.h>
+#include <Resources/BufferObject.h>
+
 
 // OpenCollada stuff
 #include <COLLADASaxFWLLoader.h>
@@ -42,6 +50,7 @@
 #include <COLLADAFWTranslate.h>
 #include <COLLADAFWRotate.h>
 #include <COLLADAFWScale.h>
+#include <COLLADAFWScene.h>
 #include <COLLADAFWLibraryNodes.h>
 #include <COLLADAFWImage.h>
 #include <COLLADAFWFileInfo.h>
@@ -139,7 +148,7 @@ void ColladaResource::Load() {
     this->root = new SceneNode();
     NodePointerArray& nodes = visualScene->getRootNodes();
     for (unsigned int i = 0; i < nodes.getCount(); i++) {
-        this->root->AddNode(ReadNode(nodes[i]));
+        ReadNode(nodes[i], this->root);
     }
     // logger.info << "Resource loaded" << logger.end;    
 }
@@ -216,65 +225,75 @@ MaterialPtr ColladaResource::LookupMaterial(UniqueId id) {
     return mp;
 }
 
-ISceneNode* ColladaResource::ReadTransformation(Transformation* t) {
-    IN("+ReadTransformation");
-    TransformationNode* tn = new TransformationNode(); 
-    switch (t->getTransformationType()) {
-    case Transformation::MATRIX: 
-        {
-            Matrix4      _m = ((COLLADAFW::Matrix*)t)->getMatrix();
-            Vector3    _pos = _m.getTrans();
-            Vector3    _scl = _m.getScale();
-            Matrix3    _rot;
-            _m.extract3x3Matrix(_rot);
-            Matrix<3,3,float> m(_m[0][0], _m[0][1], _m[0][2],
-                                _m[1][0], _m[1][1], _m[1][2],
-                                _m[2][0], _m[2][1], _m[2][2]);
-            tn->SetRotation(Quaternion<float>(m));
-            tn->SetPosition(Vector<3,float>(_pos[0], _pos[1], _pos[2]));
-            tn->SetScale(Vector<3,float>(_scl[0], _scl[1], _scl[2]));
-            break;
-        }
-    case Transformation::TRANSLATE:
-        {
-            Vector3& _pos = ((Translate*)t)->getTranslation();
-            tn->SetPosition(Vector<3,float>(_pos[0], _pos[1], _pos[2]));
-        }        
-        break;
-    case Transformation::ROTATE:
-        {
-            Rotate* _rot = ((Rotate*)t);
-            float     _a = _rot->getRotationAngle();
-            Vector3&  _v = _rot->getRotationAxis();
-            tn->SetRotation(Quaternion<float>(_a, Vector<3,float>(_v[0], _v[1], _v[2])));
-        }
-        break;
-    case Transformation::SCALE:
-        {
-            Vector3&  _scl = ((Scale*)t)->getScale();
-            tn->SetScale(Vector<3,float>(_scl[0], _scl[1], _scl[2]));
-            break;
-        }
-    case Transformation::LOOKAT:
-        Warning("Unsupported transformation type: LOOKAT");
-        break;
-    case Transformation::SKEW:
-        Warning("Unsupported transformation type: SKEW");
-        break;
-    default:
-        Warning("Unsupported transformation type.");
-    };
-    OUT();
-    return tn;
-}
+// ISceneNode* ColladaResource::ReadTransformation(Transformation* t) {
+//     IN("+ReadTransformation");
+//     TransformationNode* tn = new TransformationNode(); 
+//     switch (t->getTransformationType()) {
+//     case Transformation::MATRIX: 
+//         {
+//             Matrix4      _m = ((COLLADAFW::Matrix*)t)->getMatrix();
+//             Vector3    _pos = _m.getTrans();
+//             Vector3    _scl = _m.getScale();
+//             Matrix3    _rot;
+//             _m.extract3x3Matrix(_rot);
+//             Matrix<3,3,float> m(_m[0][0], _m[0][1], _m[0][2],
+//                                 _m[1][0], _m[1][1], _m[1][2],
+//                                 _m[2][0], _m[2][1], _m[2][2]);
+//             tn->SetRotation(Quaternion<float>(m));
+//             tn->SetPosition(Vector<3,float>(_pos[0], _pos[1], _pos[2]));
+//             tn->SetScale(Vector<3,float>(_scl[0], _scl[1], _scl[2]));
+//             break;
+//         }
+//     case Transformation::TRANSLATE:
+//         {
+//             Vector3& _pos = ((Translate*)t)->getTranslation();
+//             tn->SetPosition(Vector<3,float>(_pos[0], _pos[1], _pos[2]));
+//         }        
+//         break;
+//     case Transformation::ROTATE:
+//         {
+//             Rotate* _rot = ((Rotate*)t);
+//             float     _a = _rot->getRotationAngle();
+//             Vector3&  _v = _rot->getRotationAxis();
+//             tn->SetRotation(Quaternion<float>(_a, Vector<3,float>(_v[0], _v[1], _v[2])));
+//         }
+//         break;
+//     case Transformation::SCALE:
+//         {
+//             Vector3&  _scl = ((Scale*)t)->getScale();
+//             tn->SetScale(Vector<3,float>(_scl[0], _scl[1], _scl[2]));
+//             break;
+//         }
+//     case Transformation::LOOKAT:
+//         Warning("Unsupported transformation type: LOOKAT");
+//         break;
+//     case Transformation::SKEW:
+//         Warning("Unsupported transformation type: SKEW");
+//         break;
+//     default:
+//         Warning("Unsupported transformation type.");
+//     };
+//     OUT();
+//     return tn;
+// }
     
-ISceneNode* ColladaResource::ReadInstanceGeometry(COLLADAFW::InstanceGeometry* ig) {
+void ColladaResource::ReadInstanceGeometry(COLLADAFW::InstanceGeometry* ig, ISceneNode* parent) {
     IN("+ReadInstanceGeometry");
     GeoPrimitives* gps = LookupGeometry(ig->getInstanciatedObjectId());
     map<MaterialId, UniqueId> bindings = ExtractMaterialBindingMap(ig->getMaterialBindings());
-    ISceneNode* sn = CreateGeometry(gps, bindings);
+
+    Model* model = new Model();
+    for (GeoPrimitives::iterator i = gps->begin(); i != gps->end(); ++i) {
+        GeoPrimitive* gp = *i;
+        MaterialPtr m = LookupMaterial(bindings[gp->mId]);
+        DrawPrimitive* prim = gp->prim;
+        model->AddDrawPrimitive(DrawPrimitivePtr(new DrawPrimitive(prim->GetIndexBuffer(), 
+                                                                   prim->GetPrimitive(), 
+                                                                   m, 
+                                                                   prim->GetMesh()))); 
+    }
+    parent->AddNode(new ModelNode(model));
     OUT();
-    return sn;
 }
 
 ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::Geometry* g) {
@@ -285,7 +304,7 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
     }
 
     GeoPrimitives* gps = new GeoPrimitives();
-    Mesh* mesh = (Mesh*)g;
+    COLLADAFW::Mesh* mesh = (COLLADAFW::Mesh*)g;
 
     const int stride = 3;  // position and normal stride.
     float* posArray;
@@ -298,10 +317,6 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
     MeshVertexData& uv = mesh->getUVCoords();
     float* uvArray;
     bool delUV = ExtractFloatArray(uv, &uvArray);
-    MeshVertexData::InputInfos* uvInfo = ExtractInputInfos(uv);
-    unsigned int  uvStride = uvInfo ? uvInfo->mStride : 0;
-    // logger.info << space << "uvinputinfocount: " << uv.getNumInputInfos() << logger.end;
-    // logger.info << space << "uvstride: " << uvInfo.mStride << " name: " << uvInfo.mName << logger.end;
     
     MeshVertexData& col = mesh->getColors();
     float* colArray;
@@ -309,81 +324,85 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
     
     MeshPrimitiveArray& prims = mesh->getMeshPrimitives();
     for (unsigned int i = 0; i < prims.getCount(); i++) {
-        MeshPrimitive*    prim = prims[i];
+        MeshPrimitive* prim = prims[i];
         MaterialId mId = prim->getMaterialId(); 
-        FaceSet* fs = new FaceSet();
-        gps->push_back(new GeoPrimitive(mId, fs));
+        
+        unsigned int count     = prim->getFaceCount();
+        unsigned int vertCount = count * 3;
 
-        unsigned int     count = prim->getFaceCount();
-        UIntValuesArray&  posI = prim->getPositionIndices();
+        UIntValuesArray& posI  = prim->getPositionIndices();
         UIntValuesArray& normI = prim->getNormalIndices();
-        unsigned int*     colI = NULL;
-        unsigned int*      uvI = NULL;
-        // unsigned int indexStride = 0;        
-        // if the primitive has some texture coordinate lists we
-        // simply choose the first one.
+        unsigned int* uvI      = NULL;
+        unsigned int uvOffset  = 0;
+        unsigned int uvStride  = 0;
+        unsigned int* colI     = NULL;
+        unsigned int colOffset = 0;
+        unsigned int colStride = 0;
+
+        float* vsArr = new float[vertCount * 3];
+        float* nsArr = new float[vertCount * 3];
+        float* uvArr;
+        float* colArr;
+        
+        unsigned int* isArr = new unsigned int[vertCount];
+        Float3BufferObjectPtr vs = Float3BufferObjectPtr(new BufferObject<3,float>(vsArr, vertCount * 3));
+        Float3BufferObjectPtr ns = Float3BufferObjectPtr(new BufferObject<3,float>(nsArr, vertCount * 3));
+        IndexBufferObjectPtr  is = IndexBufferObjectPtr(new IndexBufferObject(isArr, vertCount));
+
+        IBufferObjectList uvs; 
+        Float2BufferObjectPtr uv;
+        Float3BufferObjectPtr col;
+
+        // if the primitive has multiple texture coordinates we simply
+        // choose the first one.
         if (prim->hasUVCoordIndices()) {
             IndexList* uvIL = prim->getUVCoordIndices(0);
             uvI = uvIL->getIndices().getData();
-            // logger.info << space << "uvindexstride: " << uvIL->getStride() <<  ". uvindexsetindex: " << uvIL->getSetIndex() << ". uvindexinitialindex: " << uvIL->getInitialIndex()  << logger.end;
-            //logger.info << "posISize: " << 
-            // indexStride = uvIL->getStride();
+            uvOffset = uvIL->getInitialIndex();
+            uvStride = uvIL->getStride();
+
+            uvArr = new float[vertCount * 2];
+            uvs.push_back(Float2BufferObjectPtr(new BufferObject<2,float>(uvArr, vertCount * 2)));
         }
         if (prim->hasColorIndices()) {
             IndexList* colIL = prim->getColorIndices(0);
             colI = colIL->getIndices().getData();
-            logger.info << "colorStride: " << colIL->getStride() << logger.end;
+            colOffset = colIL->getInitialIndex();
+            colStride = colIL->getStride();
+            colArr = new float[vertCount * 3];
+            col = Float3BufferObjectPtr(new BufferObject<3,float>(colArr, vertCount * 3));
+            // logger.info << "colorStride: " << colIL->getStride() << logger.end;
         }
+
         switch (prim->getPrimitiveType()) {
         case MeshPrimitive::TRIANGLES: 
             {
+                gps->push_back(new GeoPrimitive(mId, new DrawPrimitive(is, 
+                                                                       TRIANGLES, 
+                                                                       MaterialPtr(), 
+                                                                       MeshPtr(new Mesh(vs, ns, uvs, col)))));
                 unsigned int index = 0;
                 // for each face.
                 for (unsigned int j = 0; j < count; j++) {
-                    // intermediate face data
-                    Vector<3,float> verts[3];
-                    Vector<3,float> norms[3];
-                    Vector<2,float> texc[3];
-                    Vector<4,float> cols[3];
                     // for each vertex.
-                    for (int k = 2; k >= 0; --k, ++index){
-                        // cols[k][3] = 1.0;
-                        // for each vertex component.
-                        // logger.info << posI[index] << " " << normI[index] << " " <<logger.end;
-
+                    for (int k = 0; k < 3; ++k, ++index){
+                        isArr[index] = index;
                         for (int l = 0; l < stride; l++) {
-                            verts[k][l] = posArray[l+posI[index]*stride];
-                            if (mesh->hasNormals()) 
-                                norms[k][l] = normArray[l+normI[index]*stride];
-                            if (colI)
-                                cols[k][l] = colArray[l+colI[index]*stride];
+                            vsArr[index*3+l] = posArray[l+posI[index]*stride];
+                            if (mesh->hasNormals()) {
+                                nsArr[index*3+l] = normArray[l+normI[index]*stride];
+                            }
+                            if (colI) {
+                                colArr[index*3+l] = colArray[l+colI[index+colOffset]*colStride];
+                        
+                            }
                         }
                         if (uvI) {
                             for (unsigned int l = 0; l < 2; l++) {
-                                texc[k][l] = uvArray[l+uvI[index]*uvStride];
+                                uvArr[index*2+l] = uvArray[l+uvI[index]*uvStride];
                             }
                         }
-                    }
-                    try {
-                        FacePtr face = FacePtr(new Face(verts[0], verts[1], verts[2]));
-                        face->norm[0] = norms[0];
-                        face->norm[1] = norms[1];
-                        face->norm[2] = norms[2];
-                        face->texc[0] = texc[0];
-                        face->texc[1] = texc[1];
-                        face->texc[2] = texc[2];
-                        if (colI) {
-                            face->colr[0] = cols[0];
-                            face->colr[1] = cols[1];
-                            face->colr[2] = cols[2];
-                            // face->colr[3] = cols[3];
-                        }
-                        //logger.info << "cols: " << face->colr[0] << logger.end;
-                        // face->mat = mat;
-                        fs->Add(face);
-                    }
-                    catch (Exception e) {
-                        Warning("Disregarding invalid face.");
+
                     }
                 }
                 break;
@@ -392,7 +411,7 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
             Warning("Ignoring unsupported primitive type.");
         };
     } 
-
+    
     if (delPos) delete[] posArray;
     if (delNorm) delete[] normArray;
     if (delUV) delete[] uvArray;
@@ -401,74 +420,41 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
     return gps;
 }
 
-ISceneNode* ColladaResource::ReadNode(Node* node) {
+void ColladaResource::ReadNode(Node* node, ISceneNode* parent) {
     IN("+ReadNode");
-    ISceneNode* r = new SceneNode();
-    ISceneNode* c = r;
+    ISceneNode* c = parent;
 
     // Read transformations
-    TransformationNode* tn = new TransformationNode();
     Matrix4   _m = node->getTransformationMatrix();
-    Vector3 _pos = _m.getTrans();
-    Vector3 _scl = _m.getScale();
-    Matrix3 _rot;
-    _m.extract3x3Matrix(_rot);
-    Matrix<3,3,float> m(_m[0][0], _m[0][1], _m[0][2],
-                        _m[1][0], _m[1][1], _m[1][2],
-                        _m[2][0], _m[2][1], _m[2][2]);
-    tn->SetRotation(Quaternion<float>(m));
-    tn->SetPosition(Vector<3,float>(_pos[0], _pos[1], _pos[2]));
-    tn->SetScale(Vector<3,float>(_scl[0], _scl[1], _scl[2]));
-    c->AddNode(tn);
-    c = tn;
-    // for (unsigned int i = 0; i < node->getTransformations().getCount(); i++) {
-    //     ISceneNode* n = ReadTransformation(node->getTransformations()[i]);
-    //     c->AddNode(n);
-    //     c = n;
-    // }
+    if (!_m.isIdentiy()) {
+        TransformationNode* tn = new TransformationNode();
+        Vector3 _pos = _m.getTrans();
+        Vector3 _scl = _m.getScale();
+        Matrix3 _rot;
+        _m.extract3x3Matrix(_rot);
+        Matrix<3,3,float> m(_m[0][0], _m[0][1], _m[0][2],
+                            _m[1][0], _m[1][1], _m[1][2],
+                            _m[2][0], _m[2][1], _m[2][2]);
+        tn->SetRotation(Quaternion<float>(m));
+        tn->SetPosition(Vector<3,float>(_pos[0], _pos[1], _pos[2]));
+        tn->SetScale(Vector<3,float>(_scl[0], _scl[1], _scl[2]));
+        c->AddNode(tn);
+        c = tn;
+    }
 
     // Read instance geometry
     for (unsigned int i = 0; i < node->getInstanceGeometries().getCount(); i++) {
-        ISceneNode* n = ReadInstanceGeometry(node->getInstanceGeometries()[i]);
-        c->AddNode(n);
+        ReadInstanceGeometry(node->getInstanceGeometries()[i], c);
     }
 
     // Read sub-nodes
     for (unsigned int i = 0; i < node->getInstanceNodes().getCount(); i++) {
-        ISceneNode* n = ReadNode(LookupNode(node->getInstanceNodes()[i]->getInstanciatedObjectId()));
-        c->AddNode(n);
+        ReadNode(LookupNode(node->getInstanceNodes()[i]->getInstanciatedObjectId()), c);
     }
     for (unsigned int i = 0; i < node->getChildNodes().getCount(); i++) {
-        ISceneNode* n = ReadNode(node->getChildNodes()[i]);
-        c->AddNode(n);
+        ReadNode(node->getChildNodes()[i], c);
     }
     OUT();
-    return r;
-}
-
-ISceneNode* ColladaResource::CreateGeometry(GeoPrimitives* gps, map<MaterialId, UniqueId> bindings) {
-    SceneNode* sn = new SceneNode();
-    for (GeoPrimitives::iterator i = gps->begin(); i != gps->end(); ++i) {
-        GeoPrimitive* gp = *i;
-        MaterialPtr m = LookupMaterial(bindings[gp->mId]);
-        FaceSet* fs = new FaceSet();
-        for (FaceList::iterator j = gp->fs->begin(); j != gp->fs->end(); ++j) {
-            FacePtr f = FacePtr(new Face(*(*j)));
-            f->mat = m;
-            for (unsigned int k = 0; k < 3; ++k) {
-                float tmp = f->vert[k][1];
-                f->vert[k][1] = f->vert[k][upIndex];
-                f->vert[k][upIndex] = tmp;
-                tmp = f->norm[k][1];
-                f->norm[k][1] = f->norm[k][upIndex];
-                f->norm[k][upIndex] = tmp;
-            }
-            fs->Add(f);
-        }
-        GeometryNode* gn = new GeometryNode(fs);
-        sn->AddNode(gn);
-    }
-    return sn;
 }
 
 map<MaterialId, UniqueId> ColladaResource::ExtractMaterialBindingMap(MaterialBindingArray& mbs) {
@@ -508,7 +494,6 @@ bool ColladaResource::ExtractFloatArray(MeshVertexData& d, float** dest) {
     switch (d.getType()) {
     case FloatOrDoubleArray::DATA_TYPE_FLOAT:
         *dest = d.getFloatValues()->getData();
-        // memcpy(out, d.getFloatValues()->getData(), size * sizeof(float));
         break;
     case FloatOrDoubleArray::DATA_TYPE_DOUBLE: 
         {
@@ -585,6 +570,8 @@ bool ColladaResource::writeVisualScene ( const COLLADAFW::VisualScene* visualSce
 	@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeScene ( const COLLADAFW::Scene* scene ) {
     IN("writeScene");
+    // if (!this->visualScene)  
+    //     this->visualScene = new COLLADAFW::VisualScene(scene->getInstanceVisualScene());
     OUT();
     return true;
 }
@@ -647,7 +634,7 @@ bool ColladaResource::writeEffect( const COLLADAFW::Effect* effect ) {
         return true;
     }
     EffectCommon* ce = cepa[0];
-    MaterialPtr m = MaterialPtr(new Material);
+    MaterialPtr m = MaterialPtr(new Material());
 
     ExtractColor(ce->getAmbient(), m->ambient);
     ExtractColor(ce->getDiffuse(), m->diffuse);
@@ -666,8 +653,6 @@ bool ColladaResource::writeEffect( const COLLADAFW::Effect* effect ) {
             Warning("Unsupported texture sampling type");
         }
         else {
-            //logger.info << "adding texture to material" << logger.end;
-            //logger.info << "wrapS: " << PrintWrap(s->getWrapS()) << " wrapT: " << PrintWrap(s->getWrapT()) << logger.end;
             m->texr = LookupImage(s->getSourceImage());
         }
     }
@@ -693,7 +678,6 @@ bool ColladaResource::writeImage( const COLLADAFW::Image* image ) {
     if (image->getSourceType() != Image::SOURCE_TYPE_URI) 
         Error("Unsupported image source type.");
     const URI& uri = image->getImageURI();
-    //logger.info << "orguri: " << uri.originalStr() << " resuri: " << uri.getURIString() << logger.end;
     try {
         ITextureResourcePtr texr = ResourceManager<ITextureResource>::Create(resource_dir + uri.getURIString());
         images[image->getUniqueId()] = texr;
@@ -705,7 +689,7 @@ bool ColladaResource::writeImage( const COLLADAFW::Image* image ) {
     return true;
 }
 
-    /** Writes the light.
+/** Writes the light.
 		@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeLight( const COLLADAFW::Light* light ) {
     IN("writeLight");
