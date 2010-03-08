@@ -345,8 +345,8 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
         float* colArr;
         
         unsigned int* isArr = new unsigned int[vertCount];
-        Float3BufferObjectPtr vs = Float3BufferObjectPtr(new BufferObject<3,float>(vsArr, vertCount * 3));
-        Float3BufferObjectPtr ns = Float3BufferObjectPtr(new BufferObject<3,float>(nsArr, vertCount * 3));
+        Float3BufferObjectPtr vs = Float3BufferObjectPtr(new BufferObject<3,float>(vsArr, vertCount ));
+        Float3BufferObjectPtr ns = Float3BufferObjectPtr(new BufferObject<3,float>(nsArr, vertCount ));
         IndexBufferObjectPtr  is = IndexBufferObjectPtr(new IndexBufferObject(isArr, vertCount));
 
         IBufferObjectList uvs; 
@@ -362,7 +362,7 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
             uvStride = uvIL->getStride();
 
             uvArr = new float[vertCount * 2];
-            uvs.push_back(Float2BufferObjectPtr(new BufferObject<2,float>(uvArr, vertCount * 2)));
+            uvs.push_back(Float2BufferObjectPtr(new BufferObject<2,float>(uvArr, vertCount)));
         }
         if (prim->hasColorIndices()) {
             IndexList* colIL = prim->getColorIndices(0);
@@ -370,7 +370,7 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
             colOffset = colIL->getInitialIndex();
             colStride = colIL->getStride();
             colArr = new float[vertCount * 3];
-            col = Float3BufferObjectPtr(new BufferObject<3,float>(colArr, vertCount * 3));
+            col = Float3BufferObjectPtr(new BufferObject<3,float>(colArr, vertCount));
             // logger.info << "colorStride: " << colIL->getStride() << logger.end;
         }
 
