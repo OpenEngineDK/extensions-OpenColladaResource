@@ -82,7 +82,7 @@ private:
     string file, resource_dir, space;
     ISceneNode* root;
     COLLADAFW::VisualScene* visualScene;
-    unsigned int upIndex;
+    unsigned int coord[3]; // up-index correction vector
     
     // resource maps
     map<COLLADAFW::UniqueId, MaterialPtr>                effects;

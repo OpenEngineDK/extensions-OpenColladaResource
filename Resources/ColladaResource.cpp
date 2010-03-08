@@ -106,7 +106,7 @@ ColladaResource::ColladaResource(string file)
   : file(file)
   , root(NULL)
   , visualScene(NULL) 
-  , upIndex(1)
+  // , upIndex(1)
 {}
 
 /**
@@ -388,13 +388,13 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
                     for (int k = 0; k < 3; ++k, ++index){
                         isArr[index] = index;
                         for (int l = 0; l < stride; l++) {
-                            vsArr[index*3+l] = posArray[l+posI[index]*stride];
+                            vsArr[index*3+coord[l]] = posArray[l+posI[index]*stride];
                             if (mesh->hasNormals()) {
-                                nsArr[index*3+l] = normArray[l+normI[index]*stride];
+                                nsArr[index*3+coord[l]] = normArray[l+normI[index]*stride];
                             }
                             if (colI) {
                                 colArr[index*3+l] = colArray[l+colI[index+colOffset]*colStride];
-                        
+                                
                             }
                         }
                         if (uvI) {
@@ -402,7 +402,6 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
                                 uvArr[index*2+l] = uvArray[l+uvI[index]*uvStride];
                             }
                         }
-
                     }
                 }
                 break;
@@ -411,7 +410,6 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
             Warning("Ignoring unsupported primitive type.");
         };
     } 
-    
     if (delPos) delete[] posArray;
     if (delNorm) delete[] normArray;
     if (delUV) delete[] uvArray;
@@ -539,15 +537,27 @@ void ColladaResource::finish() {
 	@return The writer should return true, if writing succeeded, false otherwise.*/
 bool ColladaResource::writeGlobalAsset ( const COLLADAFW::FileInfo* asset ) {
     IN("writeGlobalAsset");
+    coord[0] = 0;
+    coord[1] = 1;
+    coord[2] = 2;
     switch (asset->getUpAxisType()) {
     case FileInfo::X_UP:
-        upIndex = 0;
+        //upIndex = 0;
+        coord[0] = 1;
+        coord[1] = 0;
+        coord[2] = 2;
         break;
-    case FileInfo::Y_UP:
-        upIndex = 1;
-        break;
+    // case FileInfo::Y_UP:
+    //     //upIndex = 1;
+    //     coord[0] = 0;
+    //     coord[1] = 1;
+    //     coord[2] = 2;
+    //     break;
     case FileInfo::Z_UP:
-        upIndex = 2;
+        //upIndex = 2;
+        coord[0] = 0;
+        coord[1] = 2;
+        coord[2] = 1;
         break;
     case FileInfo::NONE:
     default:
