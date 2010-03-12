@@ -28,8 +28,8 @@
 #include <Geometry/Mesh.h>
 #include <Geometry/Model.h>
 #include <Geometry/DrawPrimitive.h>
-#include <Resources/IndexBufferObject.h>
-#include <Resources/BufferObject.h>
+#include <Resources/DataIndices.h>
+#include <Resources/DataBlock.h>
 
 
 // OpenCollada stuff
@@ -345,13 +345,13 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
         float* colArr;
         
         unsigned int* isArr = new unsigned int[vertCount];
-        Float3BufferObjectPtr vs = Float3BufferObjectPtr(new BufferObject<3,float>(vsArr, vertCount ));
-        Float3BufferObjectPtr ns = Float3BufferObjectPtr(new BufferObject<3,float>(nsArr, vertCount ));
-        IndexBufferObjectPtr  is = IndexBufferObjectPtr(new IndexBufferObject(isArr, vertCount));
+        Float3DataBlockPtr vs = Float3DataBlockPtr(new DataBlock<3,float>(vsArr, vertCount ));
+        Float3DataBlockPtr ns = Float3DataBlockPtr(new DataBlock<3,float>(nsArr, vertCount ));
+        DataIndicesPtr  is = DataIndicesPtr(new DataIndices(isArr, vertCount));
 
-        IBufferObjectList uvs; 
-        Float2BufferObjectPtr uv;
-        Float3BufferObjectPtr col;
+        IDataBlockList uvs; 
+        Float2DataBlockPtr uv;
+        Float3DataBlockPtr col;
 
         // if the primitive has multiple texture coordinates we simply
         // choose the first one.
@@ -362,7 +362,7 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
             uvStride = uvIL->getStride();
 
             uvArr = new float[vertCount * 2];
-            uvs.push_back(Float2BufferObjectPtr(new BufferObject<2,float>(uvArr, vertCount)));
+            uvs.push_back(Float2DataBlockPtr(new DataBlock<2,float>(uvArr, vertCount)));
         }
         if (prim->hasColorIndices()) {
             IndexList* colIL = prim->getColorIndices(0);
@@ -370,7 +370,7 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
             colOffset = colIL->getInitialIndex();
             colStride = colIL->getStride();
             colArr = new float[vertCount * 3];
-            col = Float3BufferObjectPtr(new BufferObject<3,float>(colArr, vertCount));
+            col = Float3DataBlockPtr(new DataBlock<3,float>(colArr, vertCount));
             // logger.info << "colorStride: " << colIL->getStride() << logger.end;
         }
 
