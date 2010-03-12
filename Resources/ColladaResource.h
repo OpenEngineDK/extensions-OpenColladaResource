@@ -27,7 +27,7 @@
 #include <COLLADAFWInstanceGeometry.h>
 #include <COLLADAFWMaterialBinding.h>
 
-#include <Geometry/DrawPrimitive.h>
+#include <Geometry/Mesh.h>
 
 //forward declarations
 namespace COLLADAFW {
@@ -44,7 +44,7 @@ namespace OpenEngine {
     //forward declarations
     namespace Geometry {
         class Material;
-        class DrawPrimitive;
+        class Mesh;
     }
     namespace Scene {
         class ISceneNode;
@@ -58,7 +58,7 @@ using std::map;
 using std::list;
 
 using Geometry::Material;
-using Geometry::DrawPrimitive;
+using Geometry::Mesh;
 using Math::Vector;
 using Scene::ISceneNode;
 
@@ -74,8 +74,8 @@ private:
     class GeoPrimitive {
     public:
         COLLADAFW::MaterialId mId;
-        DrawPrimitive* prim;
-        GeoPrimitive(COLLADAFW::MaterialId mId, DrawPrimitive* prim) : mId(mId), prim(prim) {};
+        Mesh* prim;
+        GeoPrimitive(COLLADAFW::MaterialId mId, Mesh* prim) : mId(mId), prim(prim) {};
         virtual ~GeoPrimitive() { delete prim; }
     };
     typedef list<GeoPrimitive*> GeoPrimitives;

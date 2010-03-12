@@ -27,7 +27,7 @@
 #include <Scene/ModelNode.h>
 #include <Geometry/GeometrySet.h>
 #include <Geometry/Model.h>
-#include <Geometry/DrawPrimitive.h>
+#include <Geometry/Mesh.h>
 #include <Resources/DataIndices.h>
 #include <Resources/DataBlock.h>
 
@@ -286,8 +286,8 @@ void ColladaResource::ReadInstanceGeometry(COLLADAFW::InstanceGeometry* ig, ISce
     for (GeoPrimitives::iterator i = gps->begin(); i != gps->end(); ++i) {
         GeoPrimitive* gp = *i;
         MaterialPtr m = LookupMaterial(bindings[gp->mId]);
-        DrawPrimitive* prim = gp->prim;
-        model->AddDrawPrimitive(DrawPrimitivePtr(new DrawPrimitive(prim->GetIndexBuffer(), 
+        Mesh* prim = gp->prim;
+        model->AddMesh(MeshPtr(new Mesh(prim->GetIndexBuffer(), 
                                                                    prim->GetPrimitive(), 
                                                                    m, 
                                                                    prim->GetGeometrySet()))); 
@@ -377,10 +377,10 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
         switch (prim->getPrimitiveType()) {
         case MeshPrimitive::TRIANGLES: 
             {
-                gps->push_back(new GeoPrimitive(mId, new DrawPrimitive(is, 
-                                                                       TRIANGLES, 
-                                                                       MaterialPtr(), 
-                                                                       GeometrySetPtr(new GeometrySet(vs, ns, uvs, col)))));
+                gps->push_back(new GeoPrimitive(mId, new Mesh(is, 
+                                                              TRIANGLES, 
+                                                              MaterialPtr(), 
+                                                              GeometrySetPtr(new GeometrySet(vs, ns, uvs, col)))));
                 unsigned int index = 0;
                 // for each face.
                 for (unsigned int j = 0; j < count; j++) {
