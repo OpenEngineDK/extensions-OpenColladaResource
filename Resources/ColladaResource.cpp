@@ -25,7 +25,7 @@
 #include <Resources/File.h>
 
 #include <Scene/ModelNode.h>
-#include <Geometry/Mesh.h>
+#include <Geometry/GeometrySet.h>
 #include <Geometry/Model.h>
 #include <Geometry/DrawPrimitive.h>
 #include <Resources/DataIndices.h>
@@ -290,7 +290,7 @@ void ColladaResource::ReadInstanceGeometry(COLLADAFW::InstanceGeometry* ig, ISce
         model->AddDrawPrimitive(DrawPrimitivePtr(new DrawPrimitive(prim->GetIndexBuffer(), 
                                                                    prim->GetPrimitive(), 
                                                                    m, 
-                                                                   prim->GetMesh()))); 
+                                                                   prim->GetGeometrySet()))); 
     }
     parent->AddNode(new ModelNode(model));
     OUT();
@@ -380,7 +380,7 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
                 gps->push_back(new GeoPrimitive(mId, new DrawPrimitive(is, 
                                                                        TRIANGLES, 
                                                                        MaterialPtr(), 
-                                                                       MeshPtr(new Mesh(vs, ns, uvs, col)))));
+                                                                       GeometrySetPtr(new GeometrySet(vs, ns, uvs, col)))));
                 unsigned int index = 0;
                 // for each face.
                 for (unsigned int j = 0; j < count; j++) {
