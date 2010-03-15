@@ -341,8 +341,8 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
 
         float* vsArr = new float[vertCount * 3];
         float* nsArr = new float[vertCount * 3];
-        float* uvArr;
-        float* colArr;
+        float* uvArr = NULL;
+        float* colArr = NULL;
         
         unsigned int* isArr = new unsigned int[vertCount];
         Float3DataBlockPtr vs = Float3DataBlockPtr(new DataBlock<3,float>(vsArr, vertCount ));
