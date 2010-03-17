@@ -28,7 +28,6 @@
 #include <Geometry/GeometrySet.h>
 #include <Geometry/Model.h>
 #include <Geometry/Mesh.h>
-#include <Resources/DataIndices.h>
 #include <Resources/DataBlock.h>
 
 
