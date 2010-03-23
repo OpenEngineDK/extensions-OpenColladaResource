@@ -287,10 +287,10 @@ void ColladaResource::ReadInstanceGeometry(COLLADAFW::InstanceGeometry* ig, ISce
         GeoPrimitive* gp = *i;
         MaterialPtr m = LookupMaterial(bindings[gp->mId]);
         Mesh* prim = gp->prim;
-        model->AddMesh(MeshPtr(new Mesh(prim->GetIndexBuffer(), 
-                                                                   prim->GetPrimitive(), 
-                                                                   m, 
-                                                                   prim->GetGeometrySet()))); 
+        model->AddMesh(MeshPtr(new Mesh(prim->GetDataIndices(), 
+                                        prim->GetPrimitive(), 
+                                        prim->GetGeometrySet(), 
+                                        m))); 
     }
     parent->AddNode(new ModelNode(model));
     OUT();
@@ -379,8 +379,8 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
             {
                 gps->push_back(new GeoPrimitive(mId, new Mesh(is, 
                                                               TRIANGLES, 
-                                                              MaterialPtr(), 
-                                                              GeometrySetPtr(new GeometrySet(vs, ns, uvs, col)))));
+                                                              GeometrySetPtr(new GeometrySet(vs, ns, uvs, col)), 
+                                                              MaterialPtr())));
                 unsigned int index = 0;
                 // for each face.
                 for (unsigned int j = 0; j < count; j++) {
