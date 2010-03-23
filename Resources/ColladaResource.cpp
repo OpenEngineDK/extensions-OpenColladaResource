@@ -16,7 +16,6 @@
 #include <Scene/ISceneNode.h>
 #include <Scene/SceneNode.h>
 #include <Scene/TransformationNode.h>
-// #include <Scene/GeometryNode.h>
 #include <Math/Matrix.h>
 #include <Math/Quaternion.h>
 #include <Resources/Exceptions.h>
@@ -24,10 +23,9 @@
 #include <Resources/ResourceManager.h>
 #include <Resources/File.h>
 
-#include <Scene/ModelNode.h>
-#include <Geometry/GeometrySet.h>
-#include <Geometry/Model.h>
+#include <Scene/MeshNode.h>
 #include <Geometry/Mesh.h>
+#include <Geometry/GeometrySet.h>
 #include <Resources/DataBlock.h>
 
 
@@ -63,12 +61,12 @@
 #include <Logging/Logger.h>
 #include <string.h>
 
-#define IN(s)                                \
+#define _IN(s)                                \
     string oldspace = space;                 \
     space += "  ";                           \
     logger.info << space << s << logger.end;
 
-#define OUT()                                \
+#define _OUT()                                \
     space = oldspace;
 
 #define IN(s) 
@@ -281,18 +279,17 @@ void ColladaResource::ReadInstanceGeometry(COLLADAFW::InstanceGeometry* ig, ISce
     IN("+ReadInstanceGeometry");
     GeoPrimitives* gps = LookupGeometry(ig->getInstanciatedObjectId());
     map<MaterialId, UniqueId> bindings = ExtractMaterialBindingMap(ig->getMaterialBindings());
-
-    Model* model = new Model();
+    ISceneNode* node = new SceneNode();
     for (GeoPrimitives::iterator i = gps->begin(); i != gps->end(); ++i) {
         GeoPrimitive* gp = *i;
         MaterialPtr m = LookupMaterial(bindings[gp->mId]);
-        Mesh* prim = gp->prim;
-        model->AddMesh(MeshPtr(new Mesh(prim->GetDataIndices(), 
-                                        prim->GetPrimitive(), 
-                                        prim->GetGeometrySet(), 
-                                        m))); 
+        Mesh* mesh = gp->prim;
+        node->AddNode(new MeshNode(MeshPtr(new Mesh(mesh->GetDataIndices(), 
+                                                      mesh->GetType(), 
+                                                      mesh->GetGeometrySet(),
+                                                      m))));
     }
-    parent->AddNode(new ModelNode(model));
+    parent->AddNode(node);
     OUT();
 }
 
@@ -339,15 +336,15 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
         unsigned int colOffset = 0;
         unsigned int colStride = 0;
 
-        float* vsArr = new float[vertCount * 3];
-        float* nsArr = new float[vertCount * 3];
-        float* uvArr = NULL;
+        float* vsArr  = new float[vertCount * 3];
+        float* nsArr  = new float[vertCount * 3];
+        float* uvArr  = NULL;
         float* colArr = NULL;
         
-        unsigned int* isArr = new unsigned int[vertCount];
+        unsigned int*   isArr = new unsigned int[vertCount];
         Float3DataBlockPtr vs = Float3DataBlockPtr(new DataBlock<3,float>(vsArr, vertCount ));
         Float3DataBlockPtr ns = Float3DataBlockPtr(new DataBlock<3,float>(nsArr, vertCount ));
-        DataIndicesPtr  is = DataIndicesPtr(new DataIndices(isArr, vertCount));
+        DataIndicesPtr     is = DataIndicesPtr(new DataIndices(isArr, vertCount));
 
         IDataBlockList uvs; 
         Float2DataBlockPtr uv;
@@ -360,7 +357,6 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
             uvI = uvIL->getIndices().getData();
             uvOffset = uvIL->getInitialIndex();
             uvStride = uvIL->getStride();
-
             uvArr = new float[vertCount * 2];
             uvs.push_back(Float2DataBlockPtr(new DataBlock<2,float>(uvArr, vertCount)));
         }
@@ -377,10 +373,11 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
         switch (prim->getPrimitiveType()) {
         case MeshPrimitive::TRIANGLES: 
             {
-                gps->push_back(new GeoPrimitive(mId, new Mesh(is, 
-                                                              TRIANGLES, 
-                                                              GeometrySetPtr(new GeometrySet(vs, ns, uvs, col)), 
-                                                              MaterialPtr())));
+                gps->push_back(new GeoPrimitive(mId, 
+                                                new Mesh(is,
+                                                         TRIANGLES, 
+                                                         GeometrySetPtr(new GeometrySet(vs, ns, uvs, col)), 
+                                                         MaterialPtr())));
                 unsigned int index = 0;
                 // for each face.
                 for (unsigned int j = 0; j < count; j++) {
@@ -542,19 +539,11 @@ bool ColladaResource::writeGlobalAsset ( const COLLADAFW::FileInfo* asset ) {
     coord[2] = 2;
     switch (asset->getUpAxisType()) {
     case FileInfo::X_UP:
-        //upIndex = 0;
         coord[0] = 1;
         coord[1] = 0;
         coord[2] = 2;
         break;
-    // case FileInfo::Y_UP:
-    //     //upIndex = 1;
-    //     coord[0] = 0;
-    //     coord[1] = 1;
-    //     coord[2] = 2;
-    //     break;
     case FileInfo::Z_UP:
-        //upIndex = 2;
         coord[0] = 0;
         coord[1] = 2;
         coord[2] = 1;
@@ -580,8 +569,6 @@ bool ColladaResource::writeVisualScene ( const COLLADAFW::VisualScene* visualSce
 	@return True on succeeded, false otherwise.*/
 bool ColladaResource::writeScene ( const COLLADAFW::Scene* scene ) {
     IN("writeScene");
-    // if (!this->visualScene)  
-    //     this->visualScene = new COLLADAFW::VisualScene(scene->getInstanceVisualScene());
     OUT();
     return true;
 }
@@ -633,8 +620,8 @@ string PrintWrap(Sampler::WrapMode m) {
     }
 } 
 
-    /** Writes the effect.
-		@return True on succeeded, false otherwise.*/
+/** Writes the effect.
+    @return True on succeeded, false otherwise.*/
 bool ColladaResource::writeEffect( const COLLADAFW::Effect* effect ) {
     IN("writeEffect");
 
