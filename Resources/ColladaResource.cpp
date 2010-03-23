@@ -127,6 +127,7 @@ ColladaResource::~ColladaResource() {
 void ColladaResource::Load() {
     if (root) return;
 
+    total = 0;
     // we reset the resource path temporary to create the texture resource
     resource_dir = File::Parent(this->file);
 
@@ -149,7 +150,7 @@ void ColladaResource::Load() {
     for (unsigned int i = 0; i < nodes.getCount(); i++) {
         ReadNode(nodes[i], this->root);
     }
-    // logger.info << "Resource loaded" << logger.end;    
+    logger.info << "Resource loaded, vertex count: " << total << logger.end;    
 }
 
 /**
@@ -328,7 +329,7 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
         
         unsigned int count     = prim->getFaceCount();
         unsigned int vertCount = count * 3;
-
+        total += vertCount;
         UIntValuesArray& posI  = prim->getPositionIndices();
         UIntValuesArray& normI = prim->getNormalIndices();
         unsigned int* uvI      = NULL;

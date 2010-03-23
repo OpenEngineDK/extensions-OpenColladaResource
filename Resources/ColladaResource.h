@@ -83,7 +83,8 @@ private:
     ISceneNode* root;
     COLLADAFW::VisualScene* visualScene;
     unsigned int coord[3]; // up-index correction vector
-    
+    unsigned int total;
+
     // resource maps
     map<COLLADAFW::UniqueId, MaterialPtr>                effects;
     map<COLLADAFW::UniqueId, ITexture2DPtr>              images;
