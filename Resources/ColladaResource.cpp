@@ -342,9 +342,9 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
         float* colArr = NULL;
         
         unsigned int*   isArr = new unsigned int[vertCount];
-        Float3DataBlockPtr vs = Float3DataBlockPtr(new DataBlock<3,float>(vsArr, vertCount ));
-        Float3DataBlockPtr ns = Float3DataBlockPtr(new DataBlock<3,float>(nsArr, vertCount ));
-        DataIndicesPtr     is = DataIndicesPtr(new DataIndices(isArr, vertCount));
+        Float3DataBlockPtr vs = Float3DataBlockPtr(new DataBlock<3,float>(vertCount, vsArr));
+        Float3DataBlockPtr ns = Float3DataBlockPtr(new DataBlock<3,float>(vertCount, nsArr));
+        DataIndicesPtr     is = DataIndicesPtr(new DataIndices(vertCount, isArr));
 
         IDataBlockList uvs; 
         Float2DataBlockPtr uv;
@@ -358,7 +358,7 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
             uvOffset = uvIL->getInitialIndex();
             uvStride = uvIL->getStride();
             uvArr = new float[vertCount * 2];
-            uvs.push_back(Float2DataBlockPtr(new DataBlock<2,float>(uvArr, vertCount)));
+            uvs.push_back(Float2DataBlockPtr(new DataBlock<2,float>(vertCount, uvArr)));
         }
         if (prim->hasColorIndices()) {
             IndexList* colIL = prim->getColorIndices(0);
@@ -366,7 +366,7 @@ ColladaResource::GeoPrimitives* ColladaResource::ReadGeometry(const COLLADAFW::G
             colOffset = colIL->getInitialIndex();
             colStride = colIL->getStride();
             colArr = new float[vertCount * 3];
-            col = Float3DataBlockPtr(new DataBlock<3,float>(colArr, vertCount));
+            col = Float3DataBlockPtr(new DataBlock<3,float>(vertCount, colArr));
             // logger.info << "colorStride: " << colIL->getStride() << logger.end;
         }
 
