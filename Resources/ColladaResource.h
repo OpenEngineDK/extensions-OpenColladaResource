@@ -74,11 +74,11 @@ private:
     class GeoPrimitive {
     public:
         COLLADAFW::MaterialId mId;
-        Mesh* prim;
-        GeoPrimitive(COLLADAFW::MaterialId mId, Mesh* prim) : mId(mId), prim(prim) {};
-        virtual ~GeoPrimitive() { delete prim; }
+        Mesh prim;
+        GeoPrimitive(COLLADAFW::MaterialId mId, Mesh prim) : mId(mId), prim(prim) {};
+        virtual ~GeoPrimitive() { }
     };
-    typedef list<GeoPrimitive*> GeoPrimitives;
+    typedef list<GeoPrimitive> GeoPrimitives;
     string file, resource_dir, space;
     ISceneNode* root;
     COLLADAFW::VisualScene* visualScene;
