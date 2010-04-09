@@ -650,7 +650,7 @@ bool ColladaResource::writeEffect( const COLLADAFW::Effect* effect ) {
             Warning("Unsupported texture sampling type");
         }
         else {
-            m->texr = LookupImage(s->getSourceImage());
+            m->AddTexture(LookupImage(s->getSourceImage()));
         }
     }
     
