@@ -1,9 +1,9 @@
 # OpenColladaResource dependencies
 
 # standard set of extensions
-darcs /extensions/OpenColladaResource        http://openengine.dk/code/extensions/OpenColladaResource
+git /extensions/OpenColladaResource        https://github.com/OpenEngineDK/extensions-OpenColladaResource.git
 
-darcs-dev /extensions/OpenColladaResource    fh.daimi.au.dk:/users/cgd/code/extensions/OpenColladaResource
+git-dev /extensions/OpenColladaResource    git@github.com:OpenEngineDK/extensions-OpenColladaResource.git
 
 #data files
 linux /libraries http://openengine.dk/data/libraries/opencollada-linux32.tar.gz
